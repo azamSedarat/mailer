@@ -7,7 +7,7 @@ import { User, UserDocument } from './entities/user.entity';
 import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
 import { ForgotUserDto } from './dto/forgot-user.dto';
-import { ChangePasswordDto } from "./dto/change-password.dto";
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UserService {
