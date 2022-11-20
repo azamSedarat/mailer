@@ -10,6 +10,7 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ForgotUserDto } from './dto/forgot-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -23,6 +24,19 @@ export class UserController {
   @Get('/verify/:code')
   verify(@Param('code') code: string) {
     return this.userService.verify(code);
+  }
+
+  @Post('/forgot')
+  forgot(@Body() forgotUserDto: ForgotUserDto) {
+    return this.userService.forgotPassword(forgotUserDto);
+  }
+
+  @Get('/forgot/:code')
+  changePassword(@Param('code') code: string) {
+    return this.userService.changePassword({
+      code: code,
+      newPassword: '0000',
+    });
   }
 
   @Get()

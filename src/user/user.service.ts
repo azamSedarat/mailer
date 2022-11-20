@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,6 +6,8 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './entities/user.entity';
 import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
+import { ForgotUserDto } from './dto/forgot-user.dto';
+import { ChangePasswordDto } from "./dto/change-password.dto";
 
 @Injectable()
 export class UserService {
@@ -51,6 +53,57 @@ export class UserService {
       },
       {
         verified: true,
+        otp: null,
+      },
+    );
+    if (!res) {
+      throw new HttpException('Code invaild or expired', HttpStatus.FORBIDDEN);
+    }
+  }
+
+  async forgotPassword(forgotUserDto: ForgotUserDto) {
+    const user = await this.userModel.findOne({
+      email: forgotUserDto.email,
+      verified: true,
+    });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    const otp = {
+      code: crypto.randomBytes(20).toString('hex'),
+      expire: this.nextDate(3),
+    };
+    await this.userModel.updateOne(
+      {
+        email: forgotUserDto.email,
+      },
+      {
+        otp,
+      },
+    );
+    await this.mailService.sendMail({
+      subject: 'Forgot Password',
+      body: `
+      <h2>Forgot</h2>
+       <br>
+       <a href="http://localhost:3000/user/forgot/${otp.code}">
+       Verify by click http://localhost:3000/forgot/${otp.code}
+       </a>
+      `,
+      to: forgotUserDto.email,
+    });
+  }
+
+  async changePassword(changePasswordDto: ChangePasswordDto) {
+    const res = await this.userModel.findOneAndUpdate(
+      {
+        'otp.code': changePasswordDto.code,
+        'otp.expire': {
+          $gt: new Date(),
+        },
+      },
+      {
+        password: changePasswordDto.newPassword,
         otp: null,
       },
     );
