@@ -31,11 +31,12 @@ export class UserController {
     return this.userService.forgotPassword(forgotUserDto);
   }
 
-  @Get('/forgot/:code')
-  changePassword(@Param('code') code: string) {
+  @Get('/forgot/:email/:code')
+  changePassword(@Param('email') email: string, @Param('code') code: string) {
     return this.userService.changePassword({
+      email: email,
       code: code,
-      newPassword: '0000',
+      newPassword: '10000',
     });
   }
 

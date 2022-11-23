@@ -14,6 +14,7 @@ import * as redisStore from 'cache-manager-ioredis'
 
       host: 'localhost',
       port: 6379,
+      db: 1
     }),
     UserModule,
   ],

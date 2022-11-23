@@ -36,7 +36,7 @@ export class UserService {
       to: createUserDto.email,
     });
 
-    await this.cacheManager.set(createUserDto.email, otp.code, 180000);
+    await this.cacheManager.set(createUserDto.email, otp.code, 180);
 
     const user = await this.userModel.create(createUserDto);
     await user.save();
@@ -52,6 +52,7 @@ export class UserService {
     if (codeInRedis !== code) {
       throw new HttpException('Code invalid', HttpStatus.FORBIDDEN);
     }
+    await this.cacheManager.del(email);
     await this.userModel.updateOne({
         email: email
       },
@@ -73,21 +74,24 @@ export class UserService {
       code: crypto.randomBytes(20).toString('hex'),
       expire: this.nextDate(3),
     };
-    await this.userModel.updateOne(
-      {
-        email: forgotUserDto.email,
-      },
-      {
-        otp,
-      },
-    );
+    // await this.userModel.updateOne(
+    //   {
+    //     email: forgotUserDto.email,
+    //   },
+    //   {
+    //     otp,
+    //   },
+    // );
+
+    await this.cacheManager.set(forgotUserDto.email, otp.code, 180);
+
     await this.mailService.sendMail({
       subject: 'Forgot Password',
       body: `
       <h2>Forgot</h2>
        <br>
-       <a href="http://localhost:3000/user/forgot/${otp.code}">
-       Verify by click http://localhost:3000/forgot/${otp.code}
+       <a href="http://localhost:3000/user/forgot/${forgotUserDto.email}/${otp.code}">
+       Forget by click 
        </a>
       `,
       to: forgotUserDto.email,
@@ -95,21 +99,22 @@ export class UserService {
   }
 
   async changePassword(changePasswordDto: ChangePasswordDto) {
-    const res = await this.userModel.findOneAndUpdate(
+    const codeInRedis = await this.cacheManager.get(changePasswordDto.email);
+    if (!codeInRedis) {
+      throw new HttpException('Code expired or not found', HttpStatus.FORBIDDEN);
+    }
+    if (codeInRedis !== changePasswordDto.code) {
+      throw new HttpException('Code invalid', HttpStatus.FORBIDDEN);
+    }
+    await this.cacheManager.del(changePasswordDto.email);
+    await this.userModel.updateOne(
       {
-        'otp.code': changePasswordDto.code,
-        'otp.expire': {
-          $gt: new Date(),
-        },
+        email: changePasswordDto.email,
       },
       {
         password: changePasswordDto.newPassword,
-        otp: null,
       },
     );
-    if (!res) {
-      throw new HttpException('Code invaild or expired', HttpStatus.FORBIDDEN);
-    }
   }
 
   findAll() {
