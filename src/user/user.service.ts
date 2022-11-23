@@ -24,7 +24,19 @@ export class UserService {
       expire: this.nextDate(3),
     };
 
-    await this.mailService.sendMail({
+    // await this.mailService.sendMail({
+    //   subject: 'Verify',
+    //   body: `
+    //   <h2>Verify</h2>
+    //    <br>
+    //    <a href="http://localhost:3000/user/verify/${createUserDto.email}/${otp.code}">
+    //    Verify by click
+    //    </a>
+    //   `,
+    //   to: createUserDto.email,
+    // });
+
+    this.mailService.sendMail({
       subject: 'Verify',
       body: `
       <h2>Verify</h2>
@@ -34,6 +46,8 @@ export class UserService {
        </a>
       `,
       to: createUserDto.email,
+    }).then(value => {
+      console.log(value);
     });
 
     await this.cacheManager.set(createUserDto.email, otp.code, 180);
