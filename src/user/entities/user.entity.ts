@@ -11,11 +11,11 @@ export class User {
   @Prop()
   password: number;
 
-  @Prop({ type: Object })
+/*  @Prop({ type: Object })
   otp: {
     code: string;
     expire: Date;
-  };
+  };*/
 
   @Prop({ type: Boolean, default: false })
   verified: boolean;

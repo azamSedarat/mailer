@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,11 +8,13 @@ import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
 import { ForgotUserDto } from './dto/forgot-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private mailService: MailService,
   ) {}
 
@@ -27,38 +29,36 @@ export class UserService {
       body: `
       <h2>Verify</h2>
        <br>
-       <a href="http://localhost:3000/user/verify/${otp.code}">
-       Verify by click http://localhost:3000/verify/${otp.code}
+       <a href="http://localhost:3000/user/verify/${createUserDto.email}/${otp.code}">
+       Verify by click
        </a>
       `,
       to: createUserDto.email,
     });
 
-    const user = await this.userModel.create({
-      ...createUserDto,
-      otp,
-    });
+    await this.cacheManager.set(createUserDto.email, otp.code, 180000);
+
+    const user = await this.userModel.create(createUserDto);
     await user.save();
 
     return user;
   }
 
-  async verify(code: string) {
-    const res = await this.userModel.findOneAndUpdate(
-      {
-        'otp.code': code,
-        'otp.expire': {
-          $gt: new Date(),
-        },
+  async verify(email: string, code: string) {
+    const codeInRedis = await this.cacheManager.get(email);
+    if (!codeInRedis) {
+      throw new HttpException('Code expired or not found', HttpStatus.FORBIDDEN);
+    }
+    if (codeInRedis !== code) {
+      throw new HttpException('Code invalid', HttpStatus.FORBIDDEN);
+    }
+    await this.userModel.updateOne({
+        email: email
       },
       {
-        verified: true,
-        otp: null,
+        verified: true
       },
     );
-    if (!res) {
-      throw new HttpException('Code invaild or expired', HttpStatus.FORBIDDEN);
-    }
   }
 
   async forgotPassword(forgotUserDto: ForgotUserDto) {

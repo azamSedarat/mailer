@@ -21,9 +21,9 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
-  @Get('/verify/:code')
-  verify(@Param('code') code: string) {
-    return this.userService.verify(code);
+  @Get('/verify/:email/:code')
+  verify(@Param('email') email: string, @Param('code') code: string) {
+    return this.userService.verify(email, code);
   }
 
   @Post('/forgot')
